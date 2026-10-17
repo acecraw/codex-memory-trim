@@ -6,6 +6,23 @@
 
 [English](README.md) | 中文
 
+## V3：先标注，再压缩
+
+下一轮可生成[按项目和主题组织的精简索引](docs/MEMORY_COMPACT.md)，通过链接按需读取完整详情和原始上下文。索引字节降幅与归档大小分别统计，不把它当作已测得的 Token 节省；此流程不会替换原生记忆。
+
+最新流程逐条标注时效和用途，再判断四类关系，生成有大小限制的 Agent 工作包及英文候选记忆。见 [V3 使用说明](docs/MEMORY_TRIAGE_V3.md)。项目队列为 **并发 500、单批最多 1000 请求**；不会直接改写原生记忆。
+
+## Jev 评分与查重原型
+
+直接压缩完整 `MEMORY.md` 正文见 [措辞压缩流程](docs/MEMORY_WORDING.md)：保留原分组、来源和条目位置，生成完整本地候选稿及差异。此前的紧凑索引是另一种检索方案，其缩小比例不代表完整文件的压缩比例。
+
+V2 已加入磁盘索引、按项目选择规则、可续跑队列（**并发 500，单批最多 1000 请求**）、有大小限制的 Agent 工作包和英文草稿校验。详见 [V2 使用说明](docs/MEMORY_PIPELINE_V2.md)。此流程只导出候选稿，不修改原生记忆。
+
+新增可单独运行的本地原型：逐条价值评分、候选记忆关系判断、英文压缩稿校验，
+输出建议报告。用法与边界见[设计文档](docs/JEV_MEMORY_REVIEW.md)。
+它使用现有共享 TypeSafe 客户端和人工选定的样本；原安装器、自动清理任务尚未接入此原型。
+记忆候选稿默认英文，确有语义精度需要的中文词须单独声明。
+
 ## 为什么会有这个项目
 
 你有没有这种感觉：Codex 用得越久，越慢、越啰嗦？我不是猜的。前段时间我派了个长任务，按以往经验最多 24 小时能收尾，就丢在后台没再管，这里也有我的责任，太信任经验没回头看一眼。一个星期后它宣告失败，报告说第一个环节没完成。我翻开会话历史，发现它在按全局记忆"工程化"每一个环节：一个依赖 Podman 的简单本地启动脚本，写完就进 open-code-review，不断补安全准则，反复细化，主进度原地踏步。严格说它没做错什么，每一步都符合记忆里的规矩，但每个环节都这么过一遍，效率就是指数级下降。审查-修复-再审查是产品上线该有的流程，开发环境和本地 demo 完全不需要。
@@ -51,16 +68,32 @@
 ```bash
 git clone https://github.com/Yu-Xiao-Sheng/codex-memory-trim.git
 cd codex-memory-trim
-./install.sh          # 安装或更新到 ~/.codex/skills/codex-memory-trim
+./install.sh          # 安装或更新到选中的用户技能目录
 ./install.sh uninstall # 卸载
 ```
 
-想装到别的位置：`CODEX_HOME=/path/to/codex ./install.sh`。
+安装根目录只选择一次：非空 `CODEX_USER_SKILLS_DIR` 优先；否则使用已设置的
+`CODEX_HOME/skills`；两者都未设置时使用 `$HOME/.codex/skills`。显式传入空值会报错。
+`CODEX_USER_SKILLS_DIR` 只影响技能安装位置；`CODEX_HOME` 仍控制原生记忆和运行状态目录。
+
+自定义位置：`CODEX_USER_SKILLS_DIR="/path/with spaces/skills" ./install.sh`，
+或 `CODEX_HOME=/path/to/codex ./install.sh`。
 
 装完在新会话里说一句"精简 codex 记忆"就能触发；也可以直接跑只读巡检：
 
 ```bash
-python3 ~/.codex/skills/codex-memory-trim/scripts/collect.py
+if [[ ${CODEX_USER_SKILLS_DIR+x} ]]; then
+  [[ -n "$CODEX_USER_SKILLS_DIR" ]] || { echo "CODEX_USER_SKILLS_DIR 不能为空" >&2; exit 2; }
+  skills_root="$CODEX_USER_SKILLS_DIR"
+elif [[ ${CODEX_HOME+x} ]]; then
+  [[ -n "$CODEX_HOME" ]] || { echo "CODEX_HOME 不能为空" >&2; exit 2; }
+  skills_root="$CODEX_HOME/skills"
+else
+  skills_root="$HOME/.codex/skills"
+fi
+collect_script="$skills_root/codex-memory-trim/scripts/collect.py"
+[[ -f "$collect_script" ]] || { echo "找不到 collect.py: $collect_script" >&2; exit 2; }
+python3 "$collect_script"
 ```
 
 ## 自动执行

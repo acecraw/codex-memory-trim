@@ -5,8 +5,16 @@
 set -euo pipefail
 
 MODE="${1:-install}"
-CODEX_HOME="${CODEX_HOME:-$HOME/.codex}"
-DEST="$CODEX_HOME/skills/codex-memory-trim"
+if [[ ${CODEX_USER_SKILLS_DIR+x} ]]; then
+  [[ -n "$CODEX_USER_SKILLS_DIR" ]] || { echo "error: CODEX_USER_SKILLS_DIR must not be empty" >&2; exit 2; }
+  SKILLS_ROOT="$CODEX_USER_SKILLS_DIR"
+elif [[ ${CODEX_HOME+x} ]]; then
+  [[ -n "$CODEX_HOME" ]] || { echo "error: CODEX_HOME must not be empty" >&2; exit 2; }
+  SKILLS_ROOT="$CODEX_HOME/skills"
+else
+  SKILLS_ROOT="$HOME/.codex/skills"
+fi
+DEST="$SKILLS_ROOT/codex-memory-trim"
 SRC="$(cd "$(dirname "$0")/skill" && pwd)"
 TIMER_NAME="codex-memory-trim"
 LAUNCHD_LABEL="com.codex-memory-trim"
@@ -209,7 +217,7 @@ case "$MODE" in
     echo "  schedule daily [HH:MM] [--random 30m|2h]"
     echo "  schedule weekly [day] [HH:MM] [--random 30m|2h]   # day: mon..sun, default sat"
     echo "  unschedule                  remove the timer (systemd on Linux, launchd on macOS)"
-    echo "env: CODEX_HOME (default: \$HOME/.codex)"
+    echo "env: CODEX_USER_SKILLS_DIR (default: CODEX_HOME/skills or \$HOME/.codex/skills)"
     exit 1
     ;;
 esac

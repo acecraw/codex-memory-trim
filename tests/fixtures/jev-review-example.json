@@ -1,0 +1,37 @@
+{
+  "description": "Synthetic example only; no real memory or credentials.",
+  "entries": [
+    {
+      "id": "rule_a",
+      "text": "Production deployment requires explicit user approval.",
+      "scope": "Example production service",
+      "context": "Current standing authorization rule.",
+      "source": "synthetic:rule_a",
+      "protected": true,
+      "protected_literals": []
+    },
+    {
+      "id": "rule_b",
+      "text": "Obtain explicit approval from the user before deploying to production.",
+      "scope": "Example production service",
+      "context": "Current standing authorization rule.",
+      "source": "synthetic:rule_b",
+      "protected": true
+    },
+    {
+      "id": "ack",
+      "text": "READY.",
+      "scope": "Completed acknowledgement",
+      "context": "A one-off acknowledgement with no pending obligation.",
+      "source": "synthetic:ack",
+      "protected": false
+    }
+  ],
+  "pairs": [
+    {"a": "rule_a", "b": "rule_b", "expected": ["equivalent"]},
+    {"a": "rule_a", "b": "ack", "expected": ["unrelated"]}
+  ],
+  "candidates": [
+    {"entry": "rule_a", "text": "Get explicit user approval before production deployment.", "expected_pass": true}
+  ]
+}

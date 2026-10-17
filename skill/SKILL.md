@@ -18,7 +18,22 @@ description: Manage Codex's native global memory (~/.codex/memories) with three 
 - 分层：`sessions/*.jsonl`（不可变原始证据）→ `raw_memories.md` / `rollout_summaries/`（整理输入，由 `~/.codex/memories_1.sqlite` 表 `stage1_outputs` 重新渲染，手改会被还原）→ `MEMORY.md`（检索层）/ `memory_summary.md`（会话启动时注入的快照，文件头 `v1`）。
 - `usage_count`（stage1_outputs 列）= 检索命中次数，是保留/删除的核心依据。
 - `~/.codex/memories/.git` 是整理基线：Phase 2 以 HEAD→工作区 diff 决定巩固内容。**任何手工修改必须以 git 提交收尾**，且提交前工作区若不干净、或 `git log` 顶部是新的 "Initialize Codex git baseline"（刚跑过自动整理），必须先读 diff 合并新内容，禁止覆盖。
-- 巡检脚本（只读）：`python3 ~/.codex/skills/codex-memory-trim/scripts/collect.py`。
+- 巡检脚本（只读）使用已安装技能目录。安装根优先级为非空 `CODEX_USER_SKILLS_DIR`、已设置的 `CODEX_HOME/skills`、`$HOME/.codex/skills`；显式空值或所选目录缺少脚本时停止，不回退到另一套 Codex 安装。`CODEX_HOME` 对原生记忆和运行状态的用途保持不变。
+
+```bash
+if [[ ${CODEX_USER_SKILLS_DIR+x} ]]; then
+  [[ -n "$CODEX_USER_SKILLS_DIR" ]] || { echo "CODEX_USER_SKILLS_DIR must not be empty" >&2; exit 2; }
+  skills_root="$CODEX_USER_SKILLS_DIR"
+elif [[ ${CODEX_HOME+x} ]]; then
+  [[ -n "$CODEX_HOME" ]] || { echo "CODEX_HOME must not be empty" >&2; exit 2; }
+  skills_root="$CODEX_HOME/skills"
+else
+  skills_root="$HOME/.codex/skills"
+fi
+collect_script="$skills_root/codex-memory-trim/scripts/collect.py"
+[[ -f "$collect_script" ]] || { echo "collect.py not found: $collect_script" >&2; exit 2; }
+python3 "$collect_script"
+```
 - 记忆快照是会话启动时一次性注入；修改只对新会话（或 `codex fork`）生效。
 - 备份模板：`mkdir -p ~/.codex/backups && TS=$(date +%Y%m%d-%H%M%S) && tar czf ~/.codex/backups/memories-before-trim-$TS.tar.gz -C ~/.codex memories && cp ~/.codex/memories_1.sqlite ~/.codex/backups/memories_1-before-trim-$TS.sqlite`
 

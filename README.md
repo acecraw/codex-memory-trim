@@ -6,6 +6,26 @@ A skill that puts Codex's global memory on a periodic diet: detect duplicates, p
 
 English | [中文](README.zh.md)
 
+## V3: annotate before compression
+
+The latest workflow labels timeliness and usefulness per memory, compares four relationship types, and creates bounded agent packets and English proposals. See [V3 usage](docs/MEMORY_TRIAGE_V3.md). Project queue: **500 concurrent requests, 1,000 per batch**. Native memory remains unchanged.
+
+For full-document compression in the original layout, use the
+[MEMORY.md wording workflow](docs/MEMORY_WORDING.md). It preserves headings,
+sources and entry locations while shortening prose into a local candidate.
+The earlier [compact project/topic index](docs/MEMORY_COMPACT.md) is a separate
+retrieval proposal; its index savings are not full-document savings.
+
+## Jev review prototype
+
+The scalable V2 pipeline adds disk indexing, scoped rules, resumable queues with **500 concurrent requests / 1,000 per batch**, bounded agent packets and English draft verification. See [V2 usage](docs/MEMORY_PIPELINE_V2.md). Native memory is never modified by this pipeline.
+
+An optional local prototype now prepares per-entry value scores, candidate-pair
+relationship judgments, and English compression checks. It produces advisory
+reports without applying memory edits. See [design and usage](docs/JEV_MEMORY_REVIEW.md).
+It requires the user's shared TypeSafe client and a reviewed sample snapshot;
+the original installer and scheduled trim workflow do not enable this prototype.
+
 ## Why this exists
 
 Have you noticed your Codex getting slower and wordier the longer you use it? I'm not guessing. A while back I handed it a long task that, by past experience with similar work, should have wrapped within 24 hours, so I left it running in the background (partly my fault; I trusted experience and never checked back). A full week later it declared failure, reporting that the very first stage was incomplete. The session history showed it "engineering" every single step according to my global memories: a trivial local startup script that wraps Podman got written, sent into open-code-review, endlessly patched against security guidelines, refined and re-refined, while the main progress went nowhere. Strictly speaking it did nothing wrong; every step followed its rules. But run every step through that gauntlet and efficiency falls off a cliff. Review-fix-review-again belongs to product releases; dev environments and local demos don't need it.
@@ -51,16 +71,34 @@ Requires bash and python3. Nothing else.
 ```bash
 git clone https://github.com/Yu-Xiao-Sheng/codex-memory-trim.git
 cd codex-memory-trim
-./install.sh           # install or update into ~/.codex/skills/codex-memory-trim
+./install.sh           # install or update into the selected skills root
 ./install.sh uninstall # remove it
 ```
 
-Custom location: `CODEX_HOME=/path/to/codex ./install.sh`.
+The install root is selected once: a non-empty `CODEX_USER_SKILLS_DIR` wins;
+otherwise `CODEX_HOME/skills` is used when `CODEX_HOME` is set, then
+`$HOME/.codex/skills`. An explicitly empty root variable is an error.
+`CODEX_USER_SKILLS_DIR` affects the skill destination only; `CODEX_HOME` still
+controls the native memory and runtime-state location.
+
+Custom locations: `CODEX_USER_SKILLS_DIR="/path/with spaces/skills" ./install.sh`
+or `CODEX_HOME=/path/to/codex ./install.sh`.
 
 After installing, just say "trim codex memory" (or 中文 "精简记忆") in a new session. Or run the read-only audit directly:
 
 ```bash
-python3 ~/.codex/skills/codex-memory-trim/scripts/collect.py
+if [[ ${CODEX_USER_SKILLS_DIR+x} ]]; then
+  [[ -n "$CODEX_USER_SKILLS_DIR" ]] || { echo "CODEX_USER_SKILLS_DIR must not be empty" >&2; exit 2; }
+  skills_root="$CODEX_USER_SKILLS_DIR"
+elif [[ ${CODEX_HOME+x} ]]; then
+  [[ -n "$CODEX_HOME" ]] || { echo "CODEX_HOME must not be empty" >&2; exit 2; }
+  skills_root="$CODEX_HOME/skills"
+else
+  skills_root="$HOME/.codex/skills"
+fi
+collect_script="$skills_root/codex-memory-trim/scripts/collect.py"
+[[ -f "$collect_script" ]] || { echo "collect.py not found: $collect_script" >&2; exit 2; }
+python3 "$collect_script"
 ```
 
 ## Automatic scheduling

@@ -5,7 +5,18 @@
 ## 第 0 步：安全检查 + 备份
 
 ```bash
-python3 ~/.codex/skills/codex-memory-trim/scripts/collect.py
+if [[ ${CODEX_USER_SKILLS_DIR+x} ]]; then
+  [[ -n "$CODEX_USER_SKILLS_DIR" ]] || { echo "CODEX_USER_SKILLS_DIR must not be empty" >&2; exit 2; }
+  skills_root="$CODEX_USER_SKILLS_DIR"
+elif [[ ${CODEX_HOME+x} ]]; then
+  [[ -n "$CODEX_HOME" ]] || { echo "CODEX_HOME must not be empty" >&2; exit 2; }
+  skills_root="$CODEX_HOME/skills"
+else
+  skills_root="$HOME/.codex/skills"
+fi
+collect_script="$skills_root/codex-memory-trim/scripts/collect.py"
+[[ -f "$collect_script" ]] || { echo "collect.py not found: $collect_script" >&2; exit 2; }
+python3 "$collect_script"
 ```
 
 共享前置见 SKILL.md（备份、整理竞争检查）。`collect.py` 显示 `memory_consolidate_global` 为 running 时等它结束；正在运行的 Codex 进程无需停止。
